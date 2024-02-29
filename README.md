@@ -1,57 +1,58 @@
-# Spark Scala 3 in Practice
+# ML_Spark_Weather
 
-Ce projet est un exemple simple d'application Spark Scala 3 pour le traitement de données.
+Ce projet utilise Apache Spark et Scala pour prédire si il va pleuvoir demain en se basant sur les données météorologiques historiques.
 
-## Structure du Projet
+## Prérequis
 
-- **src/main/scala:** Contient le code source Scala.
-- **data/:** Fichiers de données
-- **shell/:** Scripts bash pour la création d'arborescence Hadoop
-- **spark/:** Scripts spark-submit et les fichiers properties.
-- **pom.xml:** Fichier de configuration Maven.
+Avant de commencer, assurez-vous d'avoir les éléments suivants installés :
 
-## Inspiration
+- Apache Spark
+- Scala
+- Java
+- Maven
 
-Ce projet a été inspiré par le livre "Spark: The Definitive Guide". Nous avons adapté les concepts du livre pour illustrer une application Spark Scala 3 pratique.
+## Installation
 
-## Configuration de l'Environnement de Développement
+1. Clonez ce dépôt :
 
-Pour développer localement, assurez-vous d'avoir les outils suivants installés sur votre machine :
+```bash
+git clone https://github.com/AbdelmajidLh/ML_Spark_Weather.git
+```
 
-- [Java](https://www.oracle.com/java/technologies/javase-downloads.html)
-- [Scala](https://www.scala-lang.org/download/)
-- [Apache Maven](https://maven.apache.org/download.cgi)
-- [Apache Spark](https://spark.apache.org/downloads.html)
+2. Accédez au répertoire du projet :
 
-## Construction et Exécution
+```bash
+cd ML_Spark_Weather
+```
 
-1. Clonez le projet :
-   ```bash
-   git clone https://github.com/AbdelmajidLh/Spark_scala3.git
-   ```
+3. Compilez le projet avec Maven : ou via votre IntelliJ (package) pour générer le jar.
 
-2. Naviguez dans le répertoire du projet :
-   ```bash
-   cd Spark_scala3
-   ```
+```bash
+mvn clean package
+```
 
-3. Compilez et exécutez le projet :
-   ```bash
-   mvn compile exec:java
-   ```
+## Utilisation
 
-## Lancer le traitement spark
-   ```bash
-   mvn compile exec:java
-   ```
+1. Assurez-vous d'avoir un fichier CSV contenant les données météorologiques. Vous pouvez utiliser le fichier `weatherAUS.csv` fourni dans le répertoire `data`. Si vous utilisez un autre fichier, assurez-vous qu'il est bien formaté selon le schéma attendu.
 
-## Suivre le job sur le cluster manager
-[local host](http://localhost:4040/jobs/)
+2. Modifiez le chemin du fichier CSV dans le fichier Main.scala si nécessaire :
 
-## Auteur
+```scala
+val filePath = "data/weatherAUS.csv"
+```
 
-Abdelmajid EL HOU - Data Scientist & Ingénieur, PhD
+3. Exécutez le programme en utilisant la commande suivante dans Windows (version unix sera ajoutée):
+
+```bash
+# assurer d'avoir la bonne configuration dans ce fichier qui se trouve dans spark/
+spark-submit.bat
+```
+
+## Contributions
+
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une nouvelle issue ou à soumettre une pull request.
 
 ## Licence
 
-Ce projet est sous licence [MIT License](LICENSE).
+Ce projet est sous licence [MIT](https://opensource.org/licenses/MIT).
+```
