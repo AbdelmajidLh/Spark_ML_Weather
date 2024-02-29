@@ -1,0 +1,7 @@
+.metals/
+.vscode/
+.idea/
+target/
+*.jar
+data/
+*.csv
