@@ -2,6 +2,7 @@ package org.example.dataloader
 
 import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
 
+// préciser le schema de données via une case class
 case class Aus(Dates: String,
                Location: String,
                MinTemp: Double,

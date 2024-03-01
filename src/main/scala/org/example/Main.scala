@@ -1,5 +1,6 @@
 package org.example
 
+// importer les bibliotheques necessaires
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
@@ -69,6 +70,8 @@ object Main {
     )).toDF("metric", "value")
 
     metrics.show()
+    // Attendre 5 minutes avant d'arrêter Spark
+    Thread.sleep(5 * 60 * 1000)
 
     // Arrêter la session Spark
     spark.stop()
