@@ -17,7 +17,8 @@ Avant de commencer, assurez-vous d'avoir les éléments suivants installés :
 - Scala
 - Java
 - Maven
-
+## Data
+Vous pouvez télécharger le jeux de données utiisé à partir de [ce lien](https://www.kaggle.com/datasets/jsphyg/weather-dataset-rattle-package/data)
 ## Installation
 
 1. Clonez ce dépôt :
