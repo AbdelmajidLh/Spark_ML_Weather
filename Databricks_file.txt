@@ -1,0 +1,180 @@
+// Vous pouvez reproduire ce projet sur databricks
+
+%scala
+
+// importer les bibliotheques necessaires
+import org.apache.spark.sql.Encoders
+import java.sql.Date
+
+// préciser le schema de données via une case class
+case class Aus(Dates: String,
+                Location: String,
+                MinTemp: Double,
+                MaxTemp: Double,
+                Rainfall: Double,
+                Evaporation: String,
+                Sunshine: String,
+                WindGustDir: String,
+                WindGustSpeed: Integer,
+                WindDir9am: String,
+                WindDir3pm: String,
+                WindSpeed9am: Integer,
+                WindSpeed3pm: Integer,
+                Humidity9am: Integer,
+                Humidity3pm: Integer,
+                Pressure9am: Double,
+                Pressure3pm: Double,
+                Cloud9am: Integer,
+                Cloud3pm: Integer,
+                Temp9am: Double,
+                Temp3pm: Double,
+                RainToday: String,
+                RISK_MM: Double,
+                RainTomorrow: String)
+
+val AusSchema = Encoders.product[Aus].schema
+
+// lire le fichier de données
+val AusDF = spark.read.schema(AusSchema).option("header", "true")
+                        .csv("/FileStore/tables/weatherAUS.csv").na.fill(0)
+display(AusDF)
+
+// nombre de lignes
+AusDF.count()
+
+// créer une tableView
+AusDF.createOrReplaceTempView("AusData");
+
+// selectionner les lignes du dataframe
+%sql
+select * from AusData;
+
+// faire un tableau count de la variable de réponse
+%sql
+select RainTomorrow, count(RainTomorrow)
+from AusData
+group by RainTomorrow;
+
+//----------------------------------------------------------------
+// Feature ingeneering
+//----------------------------------------------------------------
+// selectionner les string colonnes afin de les convertir en numeric values
+%scala
+var StringfeatureCol = Array("Dates", "Location", "Evaporation", "Sunshine", "WindGustDir", "WindDir9am", "WindDir3pm", "RainToday", "RainTomorrow");
+
+// stringIndexer pour convertir les string features en numeric
+import org.apache.spark.ml.feature.StringIndexer
+
+val df = spark.createDataFrame(
+  Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c"))
+).toDF("id", "category")
+
+val indexer = new StringIndexer()
+  .setInputCol("category")
+  .setOutputCol("categoryIndex")
+
+  // fit et transformer le df en numeric values
+val indexed = indexer.fit(df).transform(df)
+indexed.show()
+//----------------------------------------------------------------
+// pipeline pour executer de multiple transformations sur le dataframe
+// crer un index numerique our chaque colonne string
+
+import org.apache.spark.ml.attribute.Attribute
+import org.apache.spark.ml.feature.{IndexToString, StringIndexer}
+import org.apache.spark.ml.{Pipeline, PipelineModel}
+
+val indexers = StringfeatureCol.map { colName =>
+  new StringIndexer().setInputCol(colName).setHandleInvalid("skip").setOutputCol(colName + "_indexed")
+}
+
+val pipeline = new Pipeline()
+                    .setStages(indexers)
+
+val AusFinalDF = pipeline.fit(AusDF).transform(AusDF)
+
+// afficher le schema
+AusFinalDF.printSchema();
+
+// afficher le df
+display(AusFinalDF)
+
+//----------------------------------------------------------------
+// Data split
+//----------------------------------------------------------------
+// diviser le dataset en train, test files (70%, 30%)
+val splits = AusFinalDF.randomSplit(Array(0.7, 0.3))
+
+val train = splits(0)
+val test = splits(1)
+
+val train_rows = train.count()
+val test_rows = test.count()
+println("Training Rows: " + train_rows + " Testing Rows: " + test_rows)
+
+//----------------------------------------------------------------
+// Vector assembler : transformer le df en features et labal
+//----------------------------------------------------------------
+// attention : Les colonnes doivent être numeriques (_index)
+import org.apache.spark.ml.feature.VectorAssembler
+
+val assembler = new VectorAssembler()
+            .setInputCols(Array("Dates_indexed", "Location_indexed", "MinTemp",
+            "MaxTemp", "Rainfall", "Evaporation_indexed", "Sunshine_indexed",
+            "WindGustDir_indexed", "WindGustSpeed", "WindDir9am_indexed",
+            "WindDir3pm_indexed", "WindSpeed9am", "WindSpeed3pm", "Humidity9am",
+            "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm",
+            "Temp9am", "Temp3pm", "RainToday_indexed", "RISK_MM"))
+            .setOutputCol("features")
+val training = assembler.transform(train)
+            .select($"features", $"RainTomorrow_indexed".alias("label"))
+
+training.show(false)
+
+
+//----------------------------------------------------------------
+// MODELISATION : Regression logistique
+//----------------------------------------------------------------
+import org.apache.spark.ml.classification.LogisticRegression
+
+val lr = new LogisticRegression()
+    .setLabelCol("label")
+    .setFeaturesCol("features")
+    .setMaxIter(10)
+    .setRegParam(0.3)
+
+val model = lr.fit(training)
+println("model entrainé !")
+
+// tester le modèle entrainé sur le dataset test (30%)
+val testing = assembler.transform(test).select($"features", $"RainTomorrow_indexed".alias("trueLabel"))
+testing.show(false)
+
+val prediction = model.transform(testing)
+val predicted = prediction.select("features", "prediction", "trueLabel")
+predicted.show(100)
+
+// Evaluer la performance du modèle
+// # courbe ROC
+import org.apache.smark.ml.evaluation.BinaryClassificationEvaluator
+
+val evaluator = new BinaryClassificationEvaluator().setLabelCol("trueLabel")
+                .setRawPredictionCol("rawPrediction")
+                .setMetricName("areaUnderROC")
+val auc = evaluator.evaluate(prediction)
+println("AUC = " + (auc))
+
+// # matrice de confusion
+val tp = predicted.filter("prediction == 1 AND truelabel == 1").count().toFloat
+val fp = predicted.filter("prediction == 1 AND truelabel == 0").count().toFloat
+val tn = predicted.filter("prediction == 0 AND truelabel == 0").count().toFloat
+val fn = predicted.filter("prediction == 0 AND truelabel == 1").count().toFloat
+
+val metrics = spark.createDataFrame(seq(
+    ("TP", tp),
+    ("FP", fp),
+    ("TN", tn),
+    ("FN", fn),
+    ("Precision", tp / (tp + fp)),
+    ("Recall", tp / (tp + fn)))).toDF("metric", "value")
+metrics.show()
