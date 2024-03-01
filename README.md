@@ -8,8 +8,6 @@
 
 Ce projet utilise Apache Spark et Scala pour prédire si il va pleuvoir demain en se basant sur les données météorologiques historiques.
 
-<img src="https://cdn.pixabay.com/photo/2020/07/20/04/00/background-5421754_1280.jpg" alt="Spark ML Weather">
-
 
 ## Prérequis
 
